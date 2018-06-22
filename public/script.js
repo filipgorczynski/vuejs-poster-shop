@@ -1,4 +1,5 @@
-var PRICE = 9.99;
+let PRICE = 9.99;
+let LOAD_NUM = 10;
 
 new Vue({
     el: '#app',
@@ -6,27 +7,43 @@ new Vue({
         total: 0,
         items: [],
         cart: [],
+        results: [],
         newSearch: 'programming',
         lastSearch: '',
         loading: false,
         price: PRICE
     },
+    computed: {
+        noMoreItems: function () {
+            return this.items.length === this.results.length && this.results.length > 0;
+        }
+    },
     methods: {
+        appendItems: function () {
+            if (this.items.length < this.results.length) {
+                let append = this.results.slice(
+                    this.items.length,
+                    this.items.length + LOAD_NUM
+                );
+                this.items = this.items.concat(append);
+            }
+        },
         onSubmit: function () {
             this.items = [];
             this.loading = true;
             this.$http
                 .get('/search/'.concat(this.newSearch))
                 .then(function (response) {
-                    this.items = response.data;
+                    this.results = response.data;
                     this.lastSearch = this.newSearch;
+                    this.appendItems();
                     this.loading = false;
                 });
         },
         addItem: function (index) {
-            var item = this.items[index];
-            var found = false;
-            for (var i = 0; i < this.cart.length; ++i) {
+            let item = this.items[index];
+            let found = false;
+            for (let i = 0; i < this.cart.length; ++i) {
                 if (this.cart[i].id === item.id) {
                     found = true;
                     this.cart[i].qty++;
@@ -51,7 +68,7 @@ new Vue({
             item.qty--;
             this.total -= PRICE;
             if (item.qty <= 0) {
-                for (var i = 0; i < this.cart.length; ++i) {
+                for (let i = 0; i < this.cart.length; ++i) {
                     if (this.cart[i].id  == item.id) {
                         this.cart.splice(i, 1);
                         break;
@@ -68,5 +85,12 @@ new Vue({
     },
     mounted: function () {
         this.onSubmit();
-    },
+
+        let vueInstance = this;
+        let elem = document.getElementById('product-list-bottom');
+        let watcher = scrollMonitor.create(elem);
+        watcher.enterViewport(function () {
+            vueInstance.appendItems()
+        });
+    }
 });
